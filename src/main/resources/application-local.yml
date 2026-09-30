@@ -1,0 +1,3 @@
+# local 프로필 — docker-compose로 띄운 MySQL / Redis에 붙는다.
+# datasource / redis 연결 설정은 2번 작업(docker-compose)에서 채운다.
+# 테스트 전용 API(토큰 발급, 회차 좌석 초기화)는 이 프로필에서만 켠다.
