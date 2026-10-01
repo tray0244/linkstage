@@ -1,0 +1,38 @@
+# 앱을 직접 띄우거나 k6를 돌릴 때만 쓴다.
+# ./gradlew build 의 테스트는 Testcontainers가 따로 띄우므로 이 파일과 무관하다.
+# 계정은 로컬 개발 전용 값이다.
+services:
+  mysql:
+    image: mysql:8.4
+    ports:
+      # 3306은 다른 로컬 DB가 쓰는 경우가 많아 호스트 쪽만 3307로 연다.
+      - "3307:3306"
+    environment:
+      MYSQL_DATABASE: stage
+      MYSQL_USER: stage
+      MYSQL_PASSWORD: stage
+      MYSQL_ROOT_PASSWORD: root
+      TZ: Asia/Seoul
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ustage", "-pstage"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  mysql-data:
