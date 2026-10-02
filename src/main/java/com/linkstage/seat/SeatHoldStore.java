@@ -17,6 +17,9 @@ public class SeatHoldStore {
 	private static final RedisScript<String> HOLD = RedisScript.of(new ClassPathResource("lua/seat/hold.lua"),
 			String.class);
 
+	private static final RedisScript<Long> RELEASE = RedisScript.of(new ClassPathResource("lua/seat/release.lua"),
+			Long.class);
+
 	private final StringRedisTemplate redis;
 
 	public SeatHoldStore(StringRedisTemplate redis) {
@@ -32,6 +35,16 @@ public class SeatHoldStore {
 		}
 		String result = redis.execute(HOLD, keys, requestId, String.valueOf(HOLD_TTL.toSeconds()));
 		return "OK".equals(result);
+	}
+
+	// requestId로 잡은 좌석만 푼다. 푼 좌석 수를 돌려준다. 선점 멱등키는 지우지 않는다.
+	public int release(long scheduleId, List<Long> seatIds, String requestId) {
+		List<String> keys = new ArrayList<>(seatIds.size());
+		for (long seatId : seatIds) {
+			keys.add(SeatKeys.seat(scheduleId, seatId));
+		}
+		Long released = redis.execute(RELEASE, keys, requestId);
+		return released == null ? 0 : released.intValue();
 	}
 
 }
