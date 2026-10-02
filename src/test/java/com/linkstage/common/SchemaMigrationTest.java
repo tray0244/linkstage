@@ -26,11 +26,12 @@ class SchemaMigrationTest {
 	JdbcTemplate jdbc;
 
 	@Test
-	void 마이그레이션이_끝나면_테이블_7개가_있다() {
+	void 마이그레이션이_끝나면_테이블_9개가_있다() {
 		List<String> tables = jdbc.queryForList(
 				"SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE()", String.class);
 
-		assertThat(tables).contains("member", "admin", "show", "schedule", "seat_grade", "seat", "schedule_seat");
+		assertThat(tables).contains("member", "admin", "show", "schedule", "seat_grade", "seat", "schedule_seat",
+				"hold_group", "seat_hold");
 	}
 
 	@Test
@@ -48,6 +49,19 @@ class SchemaMigrationTest {
 		assertThatThrownBy(
 				() -> jdbc.update("INSERT INTO schedule_seat (schedule_id, seat_id) VALUES (?, ?)", scheduleId, seatId))
 			.isInstanceOf(DuplicateKeyException.class);
+	}
+
+	@Test
+	void 같은_request_id의_선점_그룹을_두_번_넣으면_거부한다() {
+		long scheduleId = insertSchedule();
+		jdbc.update("INSERT INTO member (email, password_hash, name) VALUES ('m@test.local', 'x', '회원')");
+		long memberId = lastInsertId();
+		String sql = "INSERT INTO hold_group (request_id, member_id, schedule_id, status, requested_seat_count, expires_at)"
+				+ " VALUES ('req-1', ?, ?, 'HOLDING', 1, NOW(6))";
+
+		jdbc.update(sql, memberId, scheduleId);
+
+		assertThatThrownBy(() -> jdbc.update(sql, memberId, scheduleId)).isInstanceOf(DuplicateKeyException.class);
 	}
 
 	private long insertSchedule() {
