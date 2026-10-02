@@ -2,7 +2,9 @@ package com.linkstage.seat;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -49,6 +51,22 @@ public class SeatHoldStore {
 	public boolean confirm(long scheduleId, List<Long> seatIds, String requestId) {
 		String result = redis.execute(CONFIRM, seatKeys(scheduleId, seatIds), requestId);
 		return "OK".equals(result);
+	}
+
+	// 좌석별 Redis 상태를 한 번에 읽는다 (MGET 1번). 키가 없는 좌석은 결과에 넣지 않는다.
+	public Map<Long, SeatHoldState> states(long scheduleId, List<Long> seatIds) {
+		if (seatIds.isEmpty()) {
+			return Map.of();
+		}
+		List<String> values = redis.opsForValue().multiGet(seatKeys(scheduleId, seatIds));
+		Map<Long, SeatHoldState> states = new HashMap<>();
+		for (int i = 0; i < seatIds.size(); i++) {
+			String value = values.get(i);
+			if (value != null) {
+				states.put(seatIds.get(i), value.startsWith("RESERVED:") ? SeatHoldState.RESERVED : SeatHoldState.HELD);
+			}
+		}
+		return states;
 	}
 
 	private static List<String> seatKeys(long scheduleId, List<Long> seatIds) {
