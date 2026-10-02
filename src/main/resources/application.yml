@@ -3,3 +3,6 @@ spring:
     name: stage
   profiles:
     default: local
+  jpa:
+    # 컨트롤러에서 지연 로딩을 하지 않는다. 조회는 서비스의 트랜잭션 안에서 끝낸다.
+    open-in-view: false
