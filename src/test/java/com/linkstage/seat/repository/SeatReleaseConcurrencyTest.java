@@ -1,4 +1,4 @@
-package com.linkstage.seat;
+package com.linkstage.seat.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

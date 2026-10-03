@@ -1,4 +1,4 @@
-package com.linkstage.seat;
+package com.linkstage.seat.repository;
 
 import java.time.Duration;
 import java.util.ArrayList;

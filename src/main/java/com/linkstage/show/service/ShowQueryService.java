@@ -1,9 +1,13 @@
-package com.linkstage.show;
+package com.linkstage.show.service;
 
 import java.util.List;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.linkstage.show.dto.ShowResponse;
+import com.linkstage.show.entity.ShowStatus;
+import com.linkstage.show.repository.ShowRepository;
 
 import lombok.RequiredArgsConstructor;
 

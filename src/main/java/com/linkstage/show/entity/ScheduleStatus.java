@@ -1,4 +1,4 @@
-package com.linkstage.show;
+package com.linkstage.show.entity;
 
 public enum ScheduleStatus {
 

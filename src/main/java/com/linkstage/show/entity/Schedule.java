@@ -1,4 +1,4 @@
-package com.linkstage.show;
+package com.linkstage.show.entity;
 
 import java.time.LocalDateTime;
 
@@ -17,39 +17,35 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.persistence.Version;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-// 회차별 좌석. 회차 하나에 좌석 하나당 1행이다.
 @Entity
-@Table(name = "schedule_seat")
+@Table(name = "schedule")
 @SQLRestriction("deleted_at is null")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class ScheduleSeat {
+public class Schedule {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
-	@JoinColumn(name = "schedule_id", nullable = false)
-	private Schedule schedule;
+	@JoinColumn(name = "show_id", nullable = false)
+	private Show show;
 
-	@ManyToOne(fetch = FetchType.LAZY, optional = false)
-	@JoinColumn(name = "seat_id", nullable = false)
-	private Seat seat;
+	@Column(name = "starts_at", nullable = false)
+	private LocalDateTime startsAt;
 
 	@Enumerated(EnumType.STRING)
 	@JdbcTypeCode(SqlTypes.VARCHAR)
 	@Column(nullable = false, length = 30)
-	private ScheduleSeatStatus status;
+	private ScheduleStatus status;
 
-	@Version
-	@Column(nullable = false)
-	private long version;
+	@Column(name = "created_at", insertable = false, updatable = false)
+	private LocalDateTime createdAt;
 
 	@Column(name = "updated_at", insertable = false, updatable = false)
 	private LocalDateTime updatedAt;

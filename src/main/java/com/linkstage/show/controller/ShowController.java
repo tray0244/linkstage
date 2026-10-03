@@ -1,9 +1,12 @@
-package com.linkstage.show;
+package com.linkstage.show.controller;
 
 import java.util.List;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.linkstage.show.dto.ShowResponse;
+import com.linkstage.show.service.ShowQueryService;
 
 import lombok.RequiredArgsConstructor;
 

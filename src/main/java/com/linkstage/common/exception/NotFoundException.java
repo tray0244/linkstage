@@ -1,4 +1,4 @@
-package com.linkstage.common;
+package com.linkstage.common.exception;
 
 public class NotFoundException extends RuntimeException {
 

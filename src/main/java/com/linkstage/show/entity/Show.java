@@ -1,4 +1,4 @@
-package com.linkstage.show;
+package com.linkstage.show.entity;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;

@@ -19,7 +19,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import com.linkstage.TestcontainersConfiguration;
-import com.linkstage.seat.SeatHoldStore;
+import com.linkstage.seat.repository.SeatHoldStore;
 
 // 시드의 2번 회차(좌석 1~50)로 확인한다. 테스트가 바꾼 Redis 키와 DB 행은 끝나면 되돌린다.
 @Import(TestcontainersConfiguration.class)

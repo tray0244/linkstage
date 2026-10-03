@@ -1,4 +1,4 @@
-package com.linkstage.show;
+package com.linkstage.show.service;
 
 import java.util.List;
 import java.util.Map;
@@ -6,10 +6,16 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.linkstage.common.NotFoundException;
-import com.linkstage.seat.SeatHoldState;
-import com.linkstage.seat.SeatHoldStore;
-import com.linkstage.show.ScheduleSeatsResponse.SeatResponse;
+import com.linkstage.common.exception.NotFoundException;
+import com.linkstage.seat.repository.SeatHoldState;
+import com.linkstage.seat.repository.SeatHoldStore;
+import com.linkstage.show.dto.ScheduleSeatsResponse;
+import com.linkstage.show.dto.ScheduleSeatsResponse.SeatResponse;
+import com.linkstage.show.dto.SeatStatus;
+import com.linkstage.show.entity.ScheduleSeat;
+import com.linkstage.show.entity.ScheduleSeatStatus;
+import com.linkstage.show.repository.ScheduleRepository;
+import com.linkstage.show.repository.ScheduleSeatRepository;
 
 import lombok.RequiredArgsConstructor;
 
