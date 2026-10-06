@@ -38,4 +38,15 @@ class OpenApiDocsTest {
 			.andExpect(jsonPath("$.paths['/api/schedules/{scheduleId}/seats']").exists());
 	}
 
+	@Test
+	void 좌석_잡기_문서에는_X_Member_Id_헤더가_있고_memberId_인자는_없다() throws Exception {
+		String hold = "$.paths['/api/schedules/{scheduleId}/holds'].post.parameters";
+		mvc.perform(get("/v3/api-docs"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath(hold + "[?(@.name == 'X-Member-Id' && @.in == 'header')]").isNotEmpty())
+			.andExpect(jsonPath(hold + "[?(@.name == 'memberId')]").isEmpty())
+			.andExpect(jsonPath("$.paths['/api/holds/{requestId}'].delete.parameters[?(@.name == 'X-Member-Id')]")
+				.isNotEmpty());
+	}
+
 }
