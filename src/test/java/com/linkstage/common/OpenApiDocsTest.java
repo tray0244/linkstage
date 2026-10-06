@@ -1,5 +1,6 @@
 package com.linkstage.common;
 
+import static org.hamcrest.Matchers.hasItems;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -47,6 +48,15 @@ class OpenApiDocsTest {
 			.andExpect(jsonPath(hold + "[?(@.name == 'memberId')]").isEmpty())
 			.andExpect(jsonPath("$.paths['/api/holds/{requestId}'].delete.parameters[?(@.name == 'X-Member-Id')]")
 				.isNotEmpty());
+	}
+
+	@Test
+	void 문서에_한글_제목과_태그가_나온다() throws Exception {
+		mvc.perform(get("/v3/api-docs"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.info.title").value("LinkStage 공연 예매 API"))
+			.andExpect(jsonPath("$.tags[*].name").value(hasItems("공연", "회차 좌석", "좌석 선점", "테스트 전용")))
+			.andExpect(jsonPath("$.paths['/api/schedules/{scheduleId}/holds'].post.summary").value("좌석 잡기"));
 	}
 
 }
