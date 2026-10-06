@@ -6,7 +6,8 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.linkstage.common.exception.NotFoundException;
+import com.linkstage.common.exception.BusinessException;
+import com.linkstage.common.exception.ErrorCode;
 import com.linkstage.seat.repository.SeatHoldState;
 import com.linkstage.seat.repository.SeatHoldStore;
 import com.linkstage.show.dto.ScheduleSeatsResponse;
@@ -33,7 +34,7 @@ public class ScheduleSeatQueryService {
 	// 좌석 정보는 MySQL에서, 누가 잡았는지는 Redis에서 읽어 합친다.
 	public ScheduleSeatsResponse findSeats(Long scheduleId) {
 		if (!scheduleRepository.existsById(scheduleId)) {
-			throw new NotFoundException("회차를 찾을 수 없습니다: " + scheduleId);
+			throw new BusinessException(ErrorCode.NOT_FOUND, "회차를 찾을 수 없습니다: " + scheduleId);
 		}
 		List<ScheduleSeat> scheduleSeats = scheduleSeatRepository.findAllWithSeat(scheduleId);
 		List<Long> seatIds = scheduleSeats.stream().map(ss -> ss.getSeat().getId()).toList();
