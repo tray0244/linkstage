@@ -17,7 +17,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class SeatHoldStore {
 
-	static final Duration HOLD_TTL = Duration.ofMinutes(10);
+	public static final Duration HOLD_TTL = Duration.ofMinutes(10);
 
 	private static final RedisScript<String> HOLD = RedisScript.of(new ClassPathResource("lua/seat/hold.lua"),
 			String.class);
@@ -39,6 +39,12 @@ public class SeatHoldStore {
 		}
 		String result = redis.execute(HOLD, keys, requestId, String.valueOf(HOLD_TTL.toSeconds()));
 		return "OK".equals(result);
+	}
+
+	// 선점 요청의 멱등키를 지운다. DB 저장에 실패해서 선점을 되돌릴 때만 쓴다.
+	// 남겨 두면 같은 requestId로 다시 보낼 때 hold.lua가 남은 'OK'를 돌려줘서, 좌석 없이 성공 처리된다.
+	public void deleteHoldRequest(long scheduleId, String requestId) {
+		redis.delete(SeatKeys.holdRequest(scheduleId, requestId));
 	}
 
 	// requestId로 잡은 좌석만 푼다. 푼 좌석 수를 돌려준다. 선점 멱등키는 지우지 않는다.
