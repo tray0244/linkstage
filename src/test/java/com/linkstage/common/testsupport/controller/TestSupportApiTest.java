@@ -55,6 +55,7 @@ class TestSupportApiTest {
 		for (long scheduleId : List.of(1L, 2L)) {
 			redis.delete(redis.keys("schedule_seat:{" + scheduleId + "}:*"));
 			redis.delete(redis.keys("hold_request:{" + scheduleId + "}:*"));
+			redis.delete("queue:{" + scheduleId + "}");
 			jdbc.update("DELETE sh FROM seat_hold sh JOIN hold_group g ON g.id = sh.hold_group_id"
 					+ " WHERE g.schedule_id = ?", scheduleId);
 			jdbc.update("DELETE FROM hold_group WHERE schedule_id = ?", scheduleId);
@@ -104,6 +105,17 @@ class TestSupportApiTest {
 		assertThat(count("SELECT COUNT(*) FROM hold_group WHERE schedule_id = 1 AND status = 'HOLDING'")).isEqualTo(1);
 		assertThat(count("SELECT COUNT(*) FROM seat_hold sh JOIN hold_group g ON g.id = sh.hold_group_id"
 				+ " WHERE g.schedule_id = 1")).isEqualTo(1);
+	}
+
+	@Test
+	void 초기화하면_그_회차의_대기열_키만_지운다() throws Exception {
+		redis.opsForZSet().add("queue:{1}", "1", 1);
+		redis.opsForZSet().add("queue:{2}", "1", 1);
+
+		reset(2L).andExpect(status().isNoContent());
+
+		assertThat(redis.hasKey("queue:{2}")).isFalse();
+		assertThat(redis.hasKey("queue:{1}")).isTrue();
 	}
 
 	@Test
