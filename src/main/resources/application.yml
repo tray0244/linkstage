@@ -6,3 +6,9 @@ spring:
   jpa:
     # 컨트롤러에서 지연 로딩을 하지 않는다. 조회는 서비스의 트랜잭션 안에서 끝낸다.
     open-in-view: false
+
+app:
+  queue:
+    # 대기열 스위치 (앱 전체). 환경 변수 APP_QUEUE_ENABLED로 덮어쓸 수 있다.
+    # false면 줄 서기가 바로 ADMITTED를 주고 Redis에 아무것도 쓰지 않는다.
+    enabled: ${APP_QUEUE_ENABLED:true}
