@@ -53,4 +53,9 @@ public class Schedule {
 	@Column(name = "deleted_at")
 	private LocalDateTime deletedAt;
 
+	// 판매 중인지는 회차 상태만 보고 정한다. 공연 상태는 보지 않는다.
+	public boolean isOnSale() {
+		return status == ScheduleStatus.ON_SALE;
+	}
+
 }

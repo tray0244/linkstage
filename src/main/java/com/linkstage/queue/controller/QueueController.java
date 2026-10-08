@@ -20,7 +20,7 @@ public class QueueController {
 
 	private final QueueService queueService;
 
-	@Operation(summary = "대기열 줄 서기", description = "줄 서고 내 순번을 준다. 이미 줄 서 있으면 맨 뒤로 간다. 성공하면 200, 없는 회차는 404 NOT_FOUND. 대기열이 꺼져 있으면 바로 ADMITTED.")
+	@Operation(summary = "대기열 줄 서기", description = "줄 서고 내 순번을 준다. 이미 줄 서 있으면 맨 뒤로 간다. 성공하면 200, 없는 회차는 404 NOT_FOUND, 판매 중이 아닌 회차는 409 NOT_ON_SALE. 대기열이 꺼져 있으면 같은 검사 뒤 바로 ADMITTED.")
 	@PostMapping("/api/schedules/{scheduleId}/queue")
 	public QueueResponse join(@PathVariable Long scheduleId, @LoginMember Long memberId) {
 		return queueService.join(memberId, scheduleId);

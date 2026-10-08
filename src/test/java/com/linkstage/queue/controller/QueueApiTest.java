@@ -1,5 +1,6 @@
 package com.linkstage.queue.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -13,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -33,6 +35,9 @@ class QueueApiTest {
 	@Autowired
 	StringRedisTemplate redis;
 
+	@Autowired
+	JdbcTemplate jdbc;
+
 	MockMvc mvc;
 
 	@BeforeEach
@@ -43,6 +48,8 @@ class QueueApiTest {
 	@AfterEach
 	void cleanUp() {
 		redis.delete("queue:{" + SCHEDULE_ID + "}");
+		// 회차 상태를 바꾼 테스트가 있으므로 되돌린다.
+		jdbc.update("UPDATE schedule SET status = 'ON_SALE' WHERE id = ?", SCHEDULE_ID);
 	}
 
 	@Test
@@ -78,6 +85,15 @@ class QueueApiTest {
 		mvc.perform(post("/api/schedules/{id}/queue", 999_999L).header("X-Member-Id", 1))
 			.andExpect(status().isNotFound())
 			.andExpect(jsonPath("$.code").value("NOT_FOUND"));
+	}
+
+	@Test
+	void 판매_중이_아닌_회차에_줄_서면_409이고_대기열_키가_생기지_않는다() throws Exception {
+		jdbc.update("UPDATE schedule SET status = 'READY' WHERE id = ?", SCHEDULE_ID);
+
+		join(1).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("NOT_ON_SALE"));
+
+		assertThat(redis.hasKey("queue:{" + SCHEDULE_ID + "}")).isFalse();
 	}
 
 	@Test

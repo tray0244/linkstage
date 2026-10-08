@@ -17,6 +17,7 @@ public enum ErrorCode {
 	NOT_FOUND(HttpStatus.NOT_FOUND, "찾을 수 없습니다."),
 	SEAT_UNAVAILABLE(HttpStatus.CONFLICT, "이미 잡힌 좌석이 있습니다."),
 	HOLD_EXPIRED(HttpStatus.CONFLICT, "좌석 선점이 이미 풀렸습니다."),
+	NOT_ON_SALE(HttpStatus.CONFLICT, "판매 중인 회차가 아닙니다."),
 	NOT_CANCELABLE(HttpStatus.CONFLICT, "취소할 수 없는 예매입니다.");
 
 	private final HttpStatus status;

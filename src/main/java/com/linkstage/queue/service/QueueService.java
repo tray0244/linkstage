@@ -7,6 +7,7 @@ import com.linkstage.common.exception.BusinessException;
 import com.linkstage.common.exception.ErrorCode;
 import com.linkstage.queue.dto.QueueResponse;
 import com.linkstage.queue.repository.QueueStore;
+import com.linkstage.show.entity.Schedule;
 import com.linkstage.show.repository.ScheduleRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -21,13 +22,15 @@ public class QueueService {
 
 	private final QueueStore queueStore;
 
-	// 판매 상태 검사, 꺼짐일 때의 회차 검사는 아직 정하지 않았다 (개발계획서 ④ "정할 것").
+	// 대기열 스위치와 관계없이 회차를 먼저 검사한다. 회차 조회는 한 번으로 있는지와 판매 중인지를 함께 본다.
 	public QueueResponse join(Long memberId, Long scheduleId) {
+		Schedule schedule = scheduleRepository.findById(scheduleId)
+			.orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "회차를 찾을 수 없습니다: " + scheduleId));
+		if (!schedule.isOnSale()) {
+			throw new BusinessException(ErrorCode.NOT_ON_SALE, "판매 중인 회차가 아닙니다: " + scheduleId);
+		}
 		if (!queueProperties.enabled()) {
 			return QueueResponse.admittedWithoutQueue();
-		}
-		if (!scheduleRepository.existsById(scheduleId)) {
-			throw new BusinessException(ErrorCode.NOT_FOUND, "회차를 찾을 수 없습니다: " + scheduleId);
 		}
 		long position = queueStore.join(scheduleId, memberId, System.currentTimeMillis());
 		return QueueResponse.waiting(position);

@@ -7,12 +7,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
@@ -32,12 +34,21 @@ class QueueDisabledTest {
 	@Autowired
 	StringRedisTemplate redis;
 
+	@Autowired
+	JdbcTemplate jdbc;
+
 	MockMvc mvc;
 
 	@BeforeEach
 	void setUp() {
 		mvc = MockMvcBuilders.webAppContextSetup(context).build();
 		redis.delete("queue:{" + SCHEDULE_ID + "}");
+	}
+
+	// 회차 상태를 바꾼 테스트가 있으므로 되돌린다.
+	@AfterEach
+	void cleanUp() {
+		jdbc.update("UPDATE schedule SET status = 'ON_SALE' WHERE id = ?", SCHEDULE_ID);
 	}
 
 	@Test
@@ -54,6 +65,22 @@ class QueueDisabledTest {
 	@Test
 	void 꺼지면_내_순번_확인은_404다() throws Exception {
 		mvc.perform(get("/api/schedules/{id}/queue/me", SCHEDULE_ID).header("X-Member-Id", 1))
+			.andExpect(status().isNotFound())
+			.andExpect(jsonPath("$.code").value("NOT_FOUND"));
+	}
+
+	@Test
+	void 꺼져도_판매_중이_아닌_회차에_줄_서면_409다() throws Exception {
+		jdbc.update("UPDATE schedule SET status = 'READY' WHERE id = ?", SCHEDULE_ID);
+
+		mvc.perform(post("/api/schedules/{id}/queue", SCHEDULE_ID).header("X-Member-Id", 1))
+			.andExpect(status().isConflict())
+			.andExpect(jsonPath("$.code").value("NOT_ON_SALE"));
+	}
+
+	@Test
+	void 꺼져도_없는_회차에_줄_서면_404다() throws Exception {
+		mvc.perform(post("/api/schedules/{id}/queue", 999_999L).header("X-Member-Id", 1))
 			.andExpect(status().isNotFound())
 			.andExpect(jsonPath("$.code").value("NOT_FOUND"));
 	}
