@@ -32,18 +32,18 @@ public class QueueStore {
 		return "queue_active:{" + scheduleId + "}";
 	}
 
-	// 줄을 세우고 순번(맨 앞이 1)을 돌려준다. ZADD는 이미 있는 회원의 점수를 새 시각으로 덮어쓰므로,
-	// 다시 줄 서면 맨 뒤로 간다. ZADD와 ZRANK는 명령 두 번이라 사이에 다른 회원이 끼면
-	// 순번이 1~2 달라질 수 있다. 안내용 숫자라 받아들인다.
-	public long join(long scheduleId, long memberId, long nowMillis) {
+	// 줄을 세우고 순번(맨 앞이 1)을 돌려준다.
+	// 이미 입장한 회원이 다시 줄 서면 입장 명단에서 먼저 뺀다 (명단에 있는지 확인하지 않고 바로 ZREM).
+	// ZADD는 이미 줄에 있는 회원의 점수를 새 시각으로 덮어쓰므로, 다시 줄 서면 맨 뒤로 간다.
+	// ZREM·ZADD·ZRANK는 명령 세 번이라 사이에 다른 회원이 끼면 순번이 1~2 달라질 수 있다. 안내용 숫자라 받아들인다.
+	// ZADD와 ZRANK 사이에 배출(admit.lua)이 끼면 이 회원이 이미 줄에서 꺼내져 순번이 없다. 그때는 빈 값을 돌려주고,
+	// 입장 명단을 다시 보는 일은 QueueService가 한다.
+	public Optional<Long> join(long scheduleId, long memberId, long nowMillis) {
 		String member = String.valueOf(memberId);
+		redis.opsForZSet().remove(activeKey(scheduleId), member);
 		redis.opsForZSet().add(key(scheduleId), member, nowMillis);
 		Long rank = redis.opsForZSet().rank(key(scheduleId), member);
-		if (rank == null) {
-			// 지금은 줄에서 빠지는 경로가 없다. ④-2에서 배출이 생기면 이 경우를 다시 정한다.
-			throw new IllegalStateException("줄 선 직후 순번이 없습니다: " + key(scheduleId) + " " + member);
-		}
-		return rank + 1;
+		return Optional.ofNullable(rank).map(r -> r + 1);
 	}
 
 	// 순번(맨 앞이 1). 줄에 없으면 빈 값이다.

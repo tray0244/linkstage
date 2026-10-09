@@ -82,6 +82,22 @@ class QueueApiTest {
 	}
 
 	@Test
+	void 입장한_회원이_다시_줄_서면_명단에서_빠지고_줄_맨_뒤로_간다() throws Exception {
+		redis.opsForZSet().add("queue_active:{" + SCHEDULE_ID + "}", "1", System.currentTimeMillis() + 60_000);
+		join(2);
+		join(3);
+		// 점수가 밀리초 단위라서, 다시 줄 서는 시각이 앞사람들과 확실히 다르게 잠깐 기다린다.
+		Thread.sleep(5);
+
+		join(1).andExpect(status().isOk())
+			.andExpect(jsonPath("$.status").value("WAITING"))
+			.andExpect(jsonPath("$.position").value(3));
+
+		assertThat(redis.opsForZSet().score("queue_active:{" + SCHEDULE_ID + "}", "1")).isNull();
+		me(1).andExpect(jsonPath("$.status").value("WAITING")).andExpect(jsonPath("$.position").value(3));
+	}
+
+	@Test
 	void 없는_회차에_줄_서면_404다() throws Exception {
 		mvc.perform(post("/api/schedules/{id}/queue", 999_999L).header("X-Member-Id", 1))
 			.andExpect(status().isNotFound())

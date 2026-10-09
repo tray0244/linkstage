@@ -1,5 +1,7 @@
 package com.linkstage.queue.service;
 
+import java.util.Optional;
+
 import org.springframework.stereotype.Service;
 
 import com.linkstage.common.config.QueueProperties;
@@ -32,8 +34,17 @@ public class QueueService {
 		if (!queueProperties.enabled()) {
 			return QueueResponse.admittedWithoutQueue();
 		}
-		long position = queueStore.join(scheduleId, memberId, System.currentTimeMillis());
-		return QueueResponse.waiting(position);
+		long now = System.currentTimeMillis();
+		Optional<Long> position = queueStore.join(scheduleId, memberId, now);
+		if (position.isPresent()) {
+			return QueueResponse.waiting(position.get());
+		}
+		// 줄 선 직후 순번이 없다 = 그 사이에 배출이 끼어 이미 입장했다. 입장 명단에서 확인한다.
+		if (queueStore.isAdmitted(scheduleId, memberId, now)) {
+			return QueueResponse.admittedFromQueue();
+		}
+		// 줄에도 명단에도 없다. 지금 구조에서는 생길 수 없는 경우라 예외로 남긴다.
+		throw new IllegalStateException("줄 선 직후 순번도 입장 기록도 없습니다: 회차 " + scheduleId + ", 회원 " + memberId);
 	}
 
 	// 폴링용이라 DB를 보지 않고 Redis만 본다. 입장 명단을 먼저 보고, 없으면 줄을 본다.
