@@ -49,8 +49,8 @@ public class TestSupportService {
 		// {회차ID}를 그대로 넣으므로 다른 회차(예: {20})의 키는 지워지지 않는다.
 		deleteKeys("schedule_seat:{" + scheduleId + "}:*");
 		deleteKeys("hold_request:{" + scheduleId + "}:*");
-		// 대기열은 회차마다 키가 하나라서 SCAN 없이 바로 지운다.
-		redis.delete(QueueStore.key(scheduleId));
+		// 대기열과 입장 명단은 회차마다 키가 하나씩이라 SCAN 없이 바로 지운다.
+		redis.delete(List.of(QueueStore.key(scheduleId), QueueStore.activeKey(scheduleId)));
 	}
 
 	// SCAN은 키를 조금씩 나눠 훑는다. KEYS처럼 Redis를 한동안 멈추게 하지 않는다.
