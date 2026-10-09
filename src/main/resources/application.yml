@@ -18,3 +18,7 @@ app:
     hard-cap: 20
     # 입장 유지 시간: 입장 명단에서 이 시간이 지나면 빠진다
     admission-ttl: 5m
+    # 1초마다 도는 배출 스케줄러를 켤지 정한다. 대기열 스위치(enabled)와 다르다.
+    # 운영에서 대기열을 켜고 끄는 값이 아니라, 테스트에서 스케줄러를 멈추기 위한 값이다.
+    # 운영과 로컬은 true로 두고, 테스트는 src/test/resources/application.properties에서 false로 둔다.
+    scheduler-enabled: true
