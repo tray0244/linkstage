@@ -12,3 +12,9 @@ app:
     # 대기열 스위치 (앱 전체). 환경 변수 APP_QUEUE_ENABLED로 덮어쓸 수 있다.
     # false면 줄 서기가 바로 ADMITTED를 주고 Redis에 아무것도 쓰지 않는다.
     enabled: ${APP_QUEUE_ENABLED:true}
+    # 정원 M: 입장 명단(queue_active)에 동시에 있을 수 있는 최대 인원
+    capacity: 100
+    # 하드캡: 한 번(1초) 배출에서 입장시키는 최대 인원
+    hard-cap: 20
+    # 입장 유지 시간: 입장 명단에서 이 시간이 지나면 빠진다
+    admission-ttl: 5m
