@@ -60,4 +60,11 @@ public class QueueStore {
 		return admitted == null ? 0 : admitted.intValue();
 	}
 
+	// 입장 명단에 있고 아직 만료되지 않았는지 본다. 기준은 admit.lua와 같다: 점수(입장 만료 시각) > 지금 시각.
+	// 만료됐지만 스케줄러가 아직 지우지 않은 회원은 입장한 것으로 보지 않는다.
+	public boolean isAdmitted(long scheduleId, long memberId, long nowMillis) {
+		Double expireAt = redis.opsForZSet().score(activeKey(scheduleId), String.valueOf(memberId));
+		return expireAt != null && expireAt > nowMillis;
+	}
+
 }

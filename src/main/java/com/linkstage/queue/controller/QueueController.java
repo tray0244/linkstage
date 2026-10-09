@@ -26,7 +26,7 @@ public class QueueController {
 		return queueService.join(memberId, scheduleId);
 	}
 
-	@Operation(summary = "내 순번 확인", description = "몇 초마다 불러서 내 순번(맨 앞이 1)을 확인한다. 성공하면 200, 줄에 없거나 대기열이 꺼져 있으면 404 NOT_FOUND.")
+	@Operation(summary = "내 순번 확인", description = "몇 초마다 불러서 내 상태를 확인한다. 입장했으면 200 ADMITTED, 줄에 있으면 200 WAITING과 순번(맨 앞이 1). 입장 명단과 줄에 모두 없거나 대기열이 꺼져 있으면 404 NOT_FOUND.")
 	@GetMapping("/api/schedules/{scheduleId}/queue/me")
 	public QueueResponse myPosition(@PathVariable Long scheduleId, @LoginMember Long memberId) {
 		return queueService.myPosition(memberId, scheduleId);

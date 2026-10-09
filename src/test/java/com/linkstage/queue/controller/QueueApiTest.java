@@ -48,6 +48,7 @@ class QueueApiTest {
 	@AfterEach
 	void cleanUp() {
 		redis.delete("queue:{" + SCHEDULE_ID + "}");
+		redis.delete("queue_active:{" + SCHEDULE_ID + "}");
 		// 회차 상태를 바꾼 테스트가 있으므로 되돌린다.
 		jdbc.update("UPDATE schedule SET status = 'ON_SALE' WHERE id = ?", SCHEDULE_ID);
 	}
@@ -94,6 +95,39 @@ class QueueApiTest {
 		join(1).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("NOT_ON_SALE"));
 
 		assertThat(redis.hasKey("queue:{" + SCHEDULE_ID + "}")).isFalse();
+	}
+
+	@Test
+	void 입장_명단에_있으면_ADMITTED다() throws Exception {
+		// 입장 만료 시각 = 지금 + 1분
+		redis.opsForZSet().add("queue_active:{" + SCHEDULE_ID + "}", "1", System.currentTimeMillis() + 60_000);
+
+		me(1).andExpect(status().isOk())
+			.andExpect(jsonPath("$.status").value("ADMITTED"))
+			.andExpect(jsonPath("$.position").value(0))
+			.andExpect(jsonPath("$.entryToken").value(nullValue()));
+	}
+
+	@Test
+	void 줄에만_있으면_WAITING이고_순번을_준다() throws Exception {
+		join(1);
+		join(2);
+
+		me(2).andExpect(status().isOk()).andExpect(jsonPath("$.status").value("WAITING"))
+			.andExpect(jsonPath("$.position").value(2));
+	}
+
+	@Test
+	void 입장_명단에서_만료된_회원은_ADMITTED가_아니다() throws Exception {
+		// 입장 만료 시각이 이미 지났다. 스케줄러가 아직 지우지 않은 상태를 만든다.
+		redis.opsForZSet().add("queue_active:{" + SCHEDULE_ID + "}", "1", System.currentTimeMillis() - 1);
+
+		me(1).andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("NOT_FOUND"));
+	}
+
+	@Test
+	void 입장_명단과_줄에_모두_없으면_404다() throws Exception {
+		me(1).andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("NOT_FOUND"));
 	}
 
 	@Test

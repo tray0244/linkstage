@@ -36,10 +36,13 @@ public class QueueService {
 		return QueueResponse.waiting(position);
 	}
 
-	// 폴링용이라 DB를 보지 않고 Redis만 본다.
+	// 폴링용이라 DB를 보지 않고 Redis만 본다. 입장 명단을 먼저 보고, 없으면 줄을 본다.
 	public QueueResponse myPosition(Long memberId, Long scheduleId) {
 		if (!queueProperties.enabled()) {
 			throw new BusinessException(ErrorCode.NOT_FOUND, "대기열이 꺼져 있습니다.");
+		}
+		if (queueStore.isAdmitted(scheduleId, memberId, System.currentTimeMillis())) {
+			return QueueResponse.admittedFromQueue();
 		}
 		return queueStore.position(scheduleId, memberId)
 			.map(QueueResponse::waiting)

@@ -12,4 +12,9 @@ public record QueueResponse(QueueStatus status, long position, String entryToken
 		return new QueueResponse(QueueStatus.ADMITTED, 0, null);
 	}
 
+	// 줄을 서서 입장 명단에 들어갔을 때. ④-3부터 입장 토큰을 함께 준다.
+	public static QueueResponse admittedFromQueue() {
+		return new QueueResponse(QueueStatus.ADMITTED, 0, null);
+	}
+
 }
