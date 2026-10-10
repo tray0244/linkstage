@@ -52,9 +52,15 @@ public class SeatHoldService {
 		}
 
 		// 같은 requestId를 이미 처리했으면 그 결과를 그대로 돌려준다 (멱등).
+		// 아래 판매 상태 검사보다 먼저 한다. 처리한 뒤에 판매가 끝났어도 처음 결과를 준다.
 		Optional<HoldGroup> existing = holdGroupRepository.findWithSeatHolds(requestId);
 		if (existing.isPresent()) {
 			return toResponse(memberId, existing.get());
+		}
+
+		// 대기열 스위치와 관계없이 언제나 검사한다. 위에서 읽은 회차를 쓴다.
+		if (!schedule.isOnSale()) {
+			throw new BusinessException(ErrorCode.NOT_ON_SALE, "판매 중인 회차가 아닙니다: " + scheduleId);
 		}
 
 		List<ScheduleSeat> scheduleSeats = scheduleSeatRepository.findAllBySeatIds(scheduleId, seatIds);

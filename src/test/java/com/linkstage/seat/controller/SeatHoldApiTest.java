@@ -54,6 +54,8 @@ class SeatHoldApiTest {
 		jdbc.update("DELETE sh FROM seat_hold sh JOIN hold_group g ON g.id = sh.hold_group_id WHERE g.schedule_id = ?",
 				SCHEDULE_ID);
 		jdbc.update("DELETE FROM hold_group WHERE schedule_id = ?", SCHEDULE_ID);
+		// 회차 상태를 바꾼 테스트가 있으므로 되돌린다.
+		jdbc.update("UPDATE schedule SET status = 'ON_SALE' WHERE id = ?", SCHEDULE_ID);
 	}
 
 	@Test
@@ -160,6 +162,24 @@ class SeatHoldApiTest {
 			.content("{\"requestId\": \"req-1\", \"seatIds\": [1]}"))
 			.andExpect(status().isUnauthorized())
 			.andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+	}
+
+	@Test
+	void 판매_중이_아닌_회차는_409이고_좌석을_잡지_않는다() throws Exception {
+		jdbc.update("UPDATE schedule SET status = 'READY' WHERE id = ?", SCHEDULE_ID);
+
+		hold(1, "req-1", "[1]").andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("NOT_ON_SALE"));
+		assertThat(redis.hasKey("schedule_seat:{" + SCHEDULE_ID + "}:1")).isFalse();
+	}
+
+	@Test
+	void 처리한_뒤_판매가_끝나도_같은_requestId는_처음_결과를_준다() throws Exception {
+		hold(1, "req-1", "[1, 2]").andExpect(status().isCreated());
+		jdbc.update("UPDATE schedule SET status = 'SOLD_OUT' WHERE id = ?", SCHEDULE_ID);
+
+		hold(1, "req-1", "[1, 2]").andExpect(status().isCreated())
+			.andExpect(jsonPath("$.requestId").value("req-1"))
+			.andExpect(jsonPath("$.seatIds").value(contains(1, 2)));
 	}
 
 	private ResultActions hold(long memberId, String requestId, String seatIds) throws Exception {
