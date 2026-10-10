@@ -192,6 +192,17 @@ class SeatHoldApiTest {
 	}
 
 	@Test
+	void 좌석을_잡으면_입장_만료_시각이_지금_더하기_10분으로_늘어난다() throws Exception {
+		long before = System.currentTimeMillis();
+
+		hold(1, "req-1", "[1]").andExpect(status().isCreated());
+
+		long after = System.currentTimeMillis();
+		Double expireAt = redis.opsForZSet().score("queue_active:{" + SCHEDULE_ID + "}", "1");
+		assertThat(expireAt).isBetween((double) before + 600_000, (double) after + 600_000);
+	}
+
+	@Test
 	void 입장_명단에_없는_회원은_403이고_좌석을_잡지_않는다() throws Exception {
 		redis.opsForZSet().remove("queue_active:{" + SCHEDULE_ID + "}", "1");
 

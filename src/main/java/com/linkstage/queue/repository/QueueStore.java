@@ -1,9 +1,12 @@
 package com.linkstage.queue.repository;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.data.redis.connection.RedisZSetCommands.ZAddArgs;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Component;
@@ -65,6 +68,18 @@ public class QueueStore {
 	public boolean isAdmitted(long scheduleId, long memberId, long nowMillis) {
 		Double expireAt = redis.opsForZSet().score(activeKey(scheduleId), String.valueOf(memberId));
 		return expireAt != null && expireAt > nowMillis;
+	}
+
+	// 입장 유지 시간을 늘린다. ZADD XX GT CH로 한 번에 한다.
+	// XX: 명단에 이미 있는 회원만 고친다 (명단에 없는 회원을 새로 넣지 않는다)
+	// GT: 새 만료 시각이 더 클 때만 고친다 (남은 시간을 줄이지 않는다)
+	// CH: 실제로 바뀌었는지 돌려받는다
+	public boolean extendAdmission(long scheduleId, long memberId, long expireAtMillis) {
+		byte[] key = activeKey(scheduleId).getBytes(StandardCharsets.UTF_8);
+		byte[] member = String.valueOf(memberId).getBytes(StandardCharsets.UTF_8);
+		Boolean changed = redis.execute((RedisCallback<Boolean>) connection -> connection.zSetCommands()
+			.zAdd(key, expireAtMillis, member, ZAddArgs.ifExists().gt().ch()));
+		return Boolean.TRUE.equals(changed);
 	}
 
 }

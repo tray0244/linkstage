@@ -1,5 +1,6 @@
 package com.linkstage.seat.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -48,6 +49,7 @@ class SeatHoldQueueDisabledTest {
 	void cleanUp() {
 		redis.delete(redis.keys("schedule_seat:{" + SCHEDULE_ID + "}:*"));
 		redis.delete(redis.keys("hold_request:{" + SCHEDULE_ID + "}:*"));
+		redis.delete("queue_active:{" + SCHEDULE_ID + "}");
 		jdbc.update("DELETE sh FROM seat_hold sh JOIN hold_group g ON g.id = sh.hold_group_id WHERE g.schedule_id = ?",
 				SCHEDULE_ID);
 		jdbc.update("DELETE FROM hold_group WHERE schedule_id = ?", SCHEDULE_ID);
@@ -65,6 +67,17 @@ class SeatHoldQueueDisabledTest {
 	@Test
 	void 꺼지면_입장_명단에_없어도_좌석을_잡는다() throws Exception {
 		hold(1, "req-1", "[1]").andExpect(status().isCreated());
+	}
+
+	@Test
+	void 꺼지면_좌석을_잡아도_입장_만료_시각을_늘리지_않는다() throws Exception {
+		// 명단이 비어 있으면 늘리기를 불러도(XX) 아무 일이 없어서 확인이 되지 않는다. 그래서 회원을 먼저 넣어 둔다.
+		long expireAt = System.currentTimeMillis() + 300_000;
+		redis.opsForZSet().add("queue_active:{" + SCHEDULE_ID + "}", "1", expireAt);
+
+		hold(1, "req-1", "[1]").andExpect(status().isCreated());
+
+		assertThat(redis.opsForZSet().score("queue_active:{" + SCHEDULE_ID + "}", "1")).isEqualTo((double) expireAt);
 	}
 
 	private ResultActions hold(long memberId, String requestId, String seatIds) throws Exception {

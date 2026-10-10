@@ -24,9 +24,11 @@ import com.linkstage.show.repository.ScheduleRepository;
 import com.linkstage.show.repository.ScheduleSeatRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 // 좌석 잡기·풀기. Redis Lua로 먼저 판정하고, 성공했을 때만 DB에 기록한다.
 // 이 클래스에는 트랜잭션을 걸지 않는다. DB 저장은 HoldRecorder가 한다.
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class SeatHoldService {
@@ -103,7 +105,22 @@ public class SeatHoldService {
 			rollback(scheduleId, seatIds, requestId);
 			throw e;
 		}
+		extendAdmission(scheduleId, memberId);
 		return new HoldResponse(requestId, seatIds, expiresAt);
+	}
+
+	// 좌석을 잡으면 입장 유지 시간을 선점 시간(10분)만큼 늘린다. 결제하는 동안 명단에서 빠지지 않게 하려는 것이다.
+	// DB 저장까지 성공한 뒤에만 부른다. 늘리기가 실패해도 좌석은 이미 잡혔으므로 로그만 남긴다.
+	private void extendAdmission(Long scheduleId, Long memberId) {
+		if (!queueProperties.enabled()) {
+			return;
+		}
+		try {
+			queueStore.extendAdmission(scheduleId, memberId, System.currentTimeMillis() + SeatHoldStore.HOLD_TTL.toMillis());
+		}
+		catch (RuntimeException e) {
+			log.warn("입장 유지 시간 늘리기 실패: 회차 {}, 회원 {}", scheduleId, memberId, e);
+		}
 	}
 
 	public void release(Long memberId, String requestId) {
