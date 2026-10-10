@@ -62,6 +62,11 @@ class SeatHoldQueueDisabledTest {
 		hold(1, "req-1", "[1]").andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("NOT_ON_SALE"));
 	}
 
+	@Test
+	void 꺼지면_입장_명단에_없어도_좌석을_잡는다() throws Exception {
+		hold(1, "req-1", "[1]").andExpect(status().isCreated());
+	}
+
 	private ResultActions hold(long memberId, String requestId, String seatIds) throws Exception {
 		return mvc.perform(post("/api/schedules/{id}/holds", SCHEDULE_ID).header("X-Member-Id", memberId)
 			.contentType(MediaType.APPLICATION_JSON)

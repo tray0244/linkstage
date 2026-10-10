@@ -13,7 +13,7 @@ public enum ErrorCode {
 	INVALID_REQUEST(HttpStatus.BAD_REQUEST, "요청 값이 잘못되었습니다."),
 	TOO_MANY_SEATS(HttpStatus.BAD_REQUEST, "한 번에 잡을 수 있는 좌석 수를 넘었습니다."),
 	UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "회원 번호가 없습니다."),
-	ENTRY_REQUIRED(HttpStatus.FORBIDDEN, "입장 토큰이 없거나 잘못되었습니다."),
+	ENTRY_REQUIRED(HttpStatus.FORBIDDEN, "대기열에서 입장해주세요."),
 	NOT_FOUND(HttpStatus.NOT_FOUND, "찾을 수 없습니다."),
 	SEAT_UNAVAILABLE(HttpStatus.CONFLICT, "이미 잡힌 좌석이 있습니다."),
 	HOLD_EXPIRED(HttpStatus.CONFLICT, "좌석 선점이 이미 풀렸습니다."),

@@ -11,6 +11,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -19,6 +20,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import com.linkstage.TestcontainersConfiguration;
+import com.linkstage.queue.repository.AdmissionTestHelper;
 import com.linkstage.common.exception.BusinessException;
 import com.linkstage.common.exception.ErrorCode;
 import com.linkstage.seat.dto.HoldRequest;
@@ -40,8 +42,15 @@ class SeatHoldServiceConcurrencyTest {
 	@Autowired
 	JdbcTemplate jdbc;
 
+	// 대기열이 켜져 있으므로 좌석을 잡을 회원 1·2를 먼저 입장 명단에 넣는다.
+	@BeforeEach
+	void admitMembers() {
+		AdmissionTestHelper.admit(redis, SCHEDULE_ID, 1, 2);
+	}
+
 	@AfterEach
 	void cleanUp() {
+		redis.delete("queue_active:{" + SCHEDULE_ID + "}");
 		redis.delete(redis.keys("schedule_seat:{" + SCHEDULE_ID + "}:*"));
 		redis.delete(redis.keys("hold_request:{" + SCHEDULE_ID + "}:*"));
 		jdbc.update("DELETE sh FROM seat_hold sh JOIN hold_group g ON g.id = sh.hold_group_id WHERE g.schedule_id = ?",

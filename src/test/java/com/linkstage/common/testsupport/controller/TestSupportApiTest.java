@@ -23,6 +23,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import com.linkstage.TestcontainersConfiguration;
+import com.linkstage.queue.repository.AdmissionTestHelper;
 import com.linkstage.seat.repository.SeatHoldStore;
 
 // 시드의 1·2번 회차(각 좌석 1~50)로 확인한다. 기본 프로필은 local이다.
@@ -47,6 +48,9 @@ class TestSupportApiTest {
 	@BeforeEach
 	void setUp() {
 		mvc = MockMvcBuilders.webAppContextSetup(context).build();
+		// 대기열이 켜져 있으므로 좌석을 잡을 회원 1·2를 1·2번 회차의 입장 명단에 넣는다.
+		AdmissionTestHelper.admit(redis, 1L, 1, 2);
+		AdmissionTestHelper.admit(redis, 2L, 1, 2);
 	}
 
 	// 초기화 API를 쓰지 않고 직접 지운다. 테스트 대상 코드로 뒷정리를 하지 않기 위해서다.
@@ -90,6 +94,8 @@ class TestSupportApiTest {
 		hold(2, 2L, "req-2", "[1]").andExpect(status().isConflict());
 
 		reset(2L).andExpect(status().isNoContent());
+		// 초기화가 2번 회차의 입장 명단도 지웠으므로 회원 2를 다시 입장시킨다.
+		AdmissionTestHelper.admit(redis, 2L, 2);
 
 		hold(2, 2L, "req-2", "[1]").andExpect(status().isCreated());
 	}

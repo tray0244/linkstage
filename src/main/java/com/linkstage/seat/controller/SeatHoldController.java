@@ -25,8 +25,8 @@ public class SeatHoldController {
 
 	private final SeatHoldService seatHoldService;
 
-	// 입장 토큰(X-Entry-Token) 검사는 ④ 대기열에서 붙인다.
-	@Operation(summary = "좌석 잡기", description = "좌석을 전부 잡거나 하나도 잡지 않는다. 같은 requestId로 다시 보내면 첫 결과를 준다. 성공하면 201, 이미 잡힌 좌석이 있으면 409 SEAT_UNAVAILABLE, 판매 중이 아닌 회차는 409 NOT_ON_SALE, 매수 초과는 400 TOO_MANY_SEATS.")
+	// 대기열이 켜져 있으면 입장 명단(queue_active)에 있는 회원만 잡을 수 있다. 확인은 SeatHoldService가 한다.
+	@Operation(summary = "좌석 잡기", description = "좌석을 전부 잡거나 하나도 잡지 않는다. 같은 requestId로 다시 보내면 첫 결과를 준다. 성공하면 201, 이미 잡힌 좌석이 있으면 409 SEAT_UNAVAILABLE, 판매 중이 아닌 회차는 409 NOT_ON_SALE, 매수 초과는 400 TOO_MANY_SEATS. 대기열이 켜져 있는데 입장 명단에 없으면 403 ENTRY_REQUIRED.")
 	@PostMapping("/api/schedules/{scheduleId}/holds")
 	@ResponseStatus(HttpStatus.CREATED)
 	public HoldResponse hold(@PathVariable Long scheduleId, @LoginMember Long memberId,

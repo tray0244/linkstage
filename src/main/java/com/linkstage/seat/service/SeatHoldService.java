@@ -8,8 +8,10 @@ import java.util.Optional;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
+import com.linkstage.common.config.QueueProperties;
 import com.linkstage.common.exception.BusinessException;
 import com.linkstage.common.exception.ErrorCode;
+import com.linkstage.queue.repository.QueueStore;
 import com.linkstage.seat.dto.HoldRequest;
 import com.linkstage.seat.dto.HoldResponse;
 import com.linkstage.seat.entity.HoldGroup;
@@ -37,6 +39,10 @@ public class SeatHoldService {
 
 	private final SeatHoldStore seatHoldStore;
 
+	private final QueueStore queueStore;
+
+	private final QueueProperties queueProperties;
+
 	private final HoldRecorder holdRecorder;
 
 	public HoldResponse hold(Long memberId, Long scheduleId, HoldRequest request) {
@@ -61,6 +67,12 @@ public class SeatHoldService {
 		// 대기열 스위치와 관계없이 언제나 검사한다. 위에서 읽은 회차를 쓴다.
 		if (!schedule.isOnSale()) {
 			throw new BusinessException(ErrorCode.NOT_ON_SALE, "판매 중인 회차가 아닙니다: " + scheduleId);
+		}
+
+		// 대기열이 켜져 있으면 입장 명단에 있고 만료되지 않은 회원만 받는다. 입장 토큰 없이 명단을 직접 본다.
+		// 이 확인과 hold.lua 사이의 몇 밀리초 틈은 받아들인다.
+		if (queueProperties.enabled() && !queueStore.isAdmitted(scheduleId, memberId, System.currentTimeMillis())) {
+			throw new BusinessException(ErrorCode.ENTRY_REQUIRED);
 		}
 
 		List<ScheduleSeat> scheduleSeats = scheduleSeatRepository.findAllBySeatIds(scheduleId, seatIds);

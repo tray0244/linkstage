@@ -22,6 +22,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import com.linkstage.TestcontainersConfiguration;
+import com.linkstage.queue.repository.AdmissionTestHelper;
 
 // 시드의 1번 회차(좌석 1~50, 공연의 1회 최대 4매)와 시드 회원 1·2번으로 확인한다.
 // 테스트가 만든 Redis 키와 DB 행은 끝나면 지운다.
@@ -45,12 +46,15 @@ class SeatHoldApiTest {
 	@BeforeEach
 	void setUp() {
 		mvc = MockMvcBuilders.webAppContextSetup(context).build();
+		// 대기열이 켜져 있으므로 좌석을 잡을 회원 1·2를 먼저 입장 명단에 넣는다.
+		AdmissionTestHelper.admit(redis, SCHEDULE_ID, 1, 2);
 	}
 
 	@AfterEach
 	void cleanUp() {
 		redis.delete(redis.keys("schedule_seat:{" + SCHEDULE_ID + "}:*"));
 		redis.delete(redis.keys("hold_request:{" + SCHEDULE_ID + "}:*"));
+		redis.delete("queue_active:{" + SCHEDULE_ID + "}");
 		jdbc.update("DELETE sh FROM seat_hold sh JOIN hold_group g ON g.id = sh.hold_group_id WHERE g.schedule_id = ?",
 				SCHEDULE_ID);
 		jdbc.update("DELETE FROM hold_group WHERE schedule_id = ?", SCHEDULE_ID);
@@ -176,6 +180,39 @@ class SeatHoldApiTest {
 	void 처리한_뒤_판매가_끝나도_같은_requestId는_처음_결과를_준다() throws Exception {
 		hold(1, "req-1", "[1, 2]").andExpect(status().isCreated());
 		jdbc.update("UPDATE schedule SET status = 'SOLD_OUT' WHERE id = ?", SCHEDULE_ID);
+
+		hold(1, "req-1", "[1, 2]").andExpect(status().isCreated())
+			.andExpect(jsonPath("$.requestId").value("req-1"))
+			.andExpect(jsonPath("$.seatIds").value(contains(1, 2)));
+	}
+
+	@Test
+	void 입장_명단에_있는_회원은_좌석을_잡는다() throws Exception {
+		hold(1, "req-1", "[1]").andExpect(status().isCreated());
+	}
+
+	@Test
+	void 입장_명단에_없는_회원은_403이고_좌석을_잡지_않는다() throws Exception {
+		redis.opsForZSet().remove("queue_active:{" + SCHEDULE_ID + "}", "1");
+
+		hold(1, "req-1", "[1]").andExpect(status().isForbidden())
+			.andExpect(jsonPath("$.code").value("ENTRY_REQUIRED"))
+			.andExpect(jsonPath("$.message").value("대기열에서 입장해주세요."));
+		assertThat(redis.hasKey("schedule_seat:{" + SCHEDULE_ID + "}:1")).isFalse();
+	}
+
+	@Test
+	void 입장_명단에서_만료된_회원은_403이다() throws Exception {
+		// 입장 만료 시각이 이미 지났다. 스케줄러가 아직 지우지 않은 상태를 만든다.
+		redis.opsForZSet().add("queue_active:{" + SCHEDULE_ID + "}", "1", System.currentTimeMillis() - 1);
+
+		hold(1, "req-1", "[1]").andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("ENTRY_REQUIRED"));
+	}
+
+	@Test
+	void 처리한_뒤_명단에서_빠져도_같은_requestId는_처음_결과를_준다() throws Exception {
+		hold(1, "req-1", "[1, 2]").andExpect(status().isCreated());
+		redis.opsForZSet().remove("queue_active:{" + SCHEDULE_ID + "}", "1");
 
 		hold(1, "req-1", "[1, 2]").andExpect(status().isCreated())
 			.andExpect(jsonPath("$.requestId").value("req-1"))
