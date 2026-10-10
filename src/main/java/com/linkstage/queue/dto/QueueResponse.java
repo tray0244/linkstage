@@ -1,20 +1,16 @@
 package com.linkstage.queue.dto;
 
-// 줄 서기와 내 순번 확인의 공통 응답. entryToken은 ④-3부터 채운다.
-public record QueueResponse(QueueStatus status, long position, String entryToken) {
+// 줄 서기와 내 순번 확인의 공통 응답.
+// 입장 토큰은 만들지 않는다. 좌석 잡기가 입장 명단(queue_active)을 직접 확인한다.
+public record QueueResponse(QueueStatus status, long position) {
 
 	public static QueueResponse waiting(long position) {
-		return new QueueResponse(QueueStatus.WAITING, position, null);
+		return new QueueResponse(QueueStatus.WAITING, position);
 	}
 
-	// 대기열이 꺼져 있을 때. 줄을 서지 않고 바로 입장한다.
-	public static QueueResponse admittedWithoutQueue() {
-		return new QueueResponse(QueueStatus.ADMITTED, 0, null);
-	}
-
-	// 줄을 서서 입장 명단에 들어갔을 때. ④-3부터 입장 토큰을 함께 준다.
-	public static QueueResponse admittedFromQueue() {
-		return new QueueResponse(QueueStatus.ADMITTED, 0, null);
+	// 입장했을 때. 줄을 서서 입장 명단에 들어갔을 때와 대기열이 꺼져 있을 때 모두 쓴다.
+	public static QueueResponse admitted() {
+		return new QueueResponse(QueueStatus.ADMITTED, 0);
 	}
 
 }

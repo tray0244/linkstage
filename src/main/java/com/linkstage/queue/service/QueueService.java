@@ -32,7 +32,7 @@ public class QueueService {
 			throw new BusinessException(ErrorCode.NOT_ON_SALE, "판매 중인 회차가 아닙니다: " + scheduleId);
 		}
 		if (!queueProperties.enabled()) {
-			return QueueResponse.admittedWithoutQueue();
+			return QueueResponse.admitted();
 		}
 		long now = System.currentTimeMillis();
 		Optional<Long> position = queueStore.join(scheduleId, memberId, now);
@@ -41,7 +41,7 @@ public class QueueService {
 		}
 		// 줄 선 직후 순번이 없다 = 그 사이에 배출이 끼어 이미 입장했다. 입장 명단에서 확인한다.
 		if (queueStore.isAdmitted(scheduleId, memberId, now)) {
-			return QueueResponse.admittedFromQueue();
+			return QueueResponse.admitted();
 		}
 		// 줄에도 명단에도 없다. 지금 구조에서는 생길 수 없는 경우라 예외로 남긴다.
 		throw new IllegalStateException("줄 선 직후 순번도 입장 기록도 없습니다: 회차 " + scheduleId + ", 회원 " + memberId);
@@ -53,7 +53,7 @@ public class QueueService {
 			throw new BusinessException(ErrorCode.NOT_FOUND, "대기열이 꺼져 있습니다.");
 		}
 		if (queueStore.isAdmitted(scheduleId, memberId, System.currentTimeMillis())) {
-			return QueueResponse.admittedFromQueue();
+			return QueueResponse.admitted();
 		}
 		return queueStore.position(scheduleId, memberId)
 			.map(QueueResponse::waiting)

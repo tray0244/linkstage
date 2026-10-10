@@ -53,7 +53,7 @@ class QueueJoinRaceTest {
 			return Optional.empty();
 		}).when(queueStore).join(eq(SCHEDULE_ID), eq(1L), anyLong());
 
-		assertThat(queueService.join(1L, SCHEDULE_ID)).isEqualTo(QueueResponse.admittedFromQueue());
+		assertThat(queueService.join(1L, SCHEDULE_ID)).isEqualTo(QueueResponse.admitted());
 	}
 
 	@Test

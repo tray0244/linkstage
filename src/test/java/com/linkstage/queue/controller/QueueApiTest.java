@@ -1,7 +1,6 @@
 package com.linkstage.queue.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -58,7 +57,7 @@ class QueueApiTest {
 		join(1).andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("WAITING"))
 			.andExpect(jsonPath("$.position").value(1))
-			.andExpect(jsonPath("$.entryToken").value(nullValue()));
+			.andExpect(jsonPath("$.entryToken").doesNotExist());
 		join(2).andExpect(jsonPath("$.position").value(2));
 		join(3).andExpect(jsonPath("$.position").value(3));
 
@@ -121,7 +120,7 @@ class QueueApiTest {
 		me(1).andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ADMITTED"))
 			.andExpect(jsonPath("$.position").value(0))
-			.andExpect(jsonPath("$.entryToken").value(nullValue()));
+			.andExpect(jsonPath("$.entryToken").doesNotExist());
 	}
 
 	@Test

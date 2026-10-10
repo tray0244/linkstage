@@ -1,7 +1,6 @@
 package com.linkstage.queue.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -57,7 +56,7 @@ class QueueDisabledTest {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ADMITTED"))
 			.andExpect(jsonPath("$.position").value(0))
-			.andExpect(jsonPath("$.entryToken").value(nullValue()));
+			.andExpect(jsonPath("$.entryToken").doesNotExist());
 
 		assertThat(redis.hasKey("queue:{" + SCHEDULE_ID + "}")).isFalse();
 	}
