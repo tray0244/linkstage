@@ -38,8 +38,10 @@ public class TestSupportService {
 		if (!scheduleRepository.existsById(scheduleId)) {
 			throw new BusinessException(ErrorCode.NOT_FOUND, "회차를 찾을 수 없습니다: " + scheduleId);
 		}
-		// DB는 트랜잭션 하나로 되돌린다. seat_hold가 hold_group을 가리키므로 seat_hold를 먼저 지운다.
+		// DB는 트랜잭션 하나로 되돌린다. payment와 seat_hold가 hold_group을 가리키므로 둘을 먼저 지운다.
 		transactionTemplate.executeWithoutResult(status -> {
+			jdbc.update("DELETE p FROM payment p JOIN hold_group g ON g.id = p.hold_group_id"
+					+ " WHERE g.schedule_id = ?", scheduleId);
 			jdbc.update("DELETE sh FROM seat_hold sh JOIN hold_group g ON g.id = sh.hold_group_id"
 					+ " WHERE g.schedule_id = ?", scheduleId);
 			jdbc.update("DELETE FROM hold_group WHERE schedule_id = ?", scheduleId);

@@ -61,6 +61,8 @@ class TestSupportApiTest {
 			redis.delete(redis.keys("hold_request:{" + scheduleId + "}:*"));
 			redis.delete("queue:{" + scheduleId + "}");
 			redis.delete("queue_active:{" + scheduleId + "}");
+			jdbc.update("DELETE p FROM payment p JOIN hold_group g ON g.id = p.hold_group_id"
+					+ " WHERE g.schedule_id = ?", scheduleId);
 			jdbc.update("DELETE sh FROM seat_hold sh JOIN hold_group g ON g.id = sh.hold_group_id"
 					+ " WHERE g.schedule_id = ?", scheduleId);
 			jdbc.update("DELETE FROM hold_group WHERE schedule_id = ?", scheduleId);
@@ -115,6 +117,20 @@ class TestSupportApiTest {
 	}
 
 	@Test
+	void 결제가_있어도_초기화하면_그_회차의_결제만_지운다() throws Exception {
+		hold(1, 1L, "req-s1", "[1]").andExpect(status().isCreated());
+		hold(1, 2L, "req-s2", "[1]").andExpect(status().isCreated());
+		insertPayment("order-s1", "req-s1");
+		insertPayment("order-s2", "req-s2");
+
+		reset(2L).andExpect(status().isNoContent());
+
+		assertThat(count("SELECT COUNT(*) FROM payment WHERE order_id = 'order-s2'")).isZero();
+		assertThat(count("SELECT COUNT(*) FROM payment WHERE order_id = 'order-s1'")).isEqualTo(1);
+		assertThat(count("SELECT COUNT(*) FROM hold_group WHERE schedule_id = 2")).isZero();
+	}
+
+	@Test
 	void 초기화하면_그_회차의_대기열_키만_지운다() throws Exception {
 		redis.opsForZSet().add("queue:{1}", "1", 1);
 		redis.opsForZSet().add("queue:{2}", "1", 1);
@@ -149,6 +165,13 @@ class TestSupportApiTest {
 
 	private ResultActions reset(long scheduleId) throws Exception {
 		return mvc.perform(post("/api/test/schedules/{id}/reset", scheduleId));
+	}
+
+	// 결제 준비 API가 아직 없어서 READY 결제를 직접 넣는다. 선점이 없으면 0건이 들어가므로 1건인지 확인한다.
+	private void insertPayment(String orderId, String requestId) {
+		int inserted = jdbc.update("INSERT INTO payment (order_id, member_id, hold_group_id, amount, status)"
+				+ " SELECT ?, member_id, id, 100000, 'READY' FROM hold_group WHERE request_id = ?", orderId, requestId);
+		assertThat(inserted).isEqualTo(1);
 	}
 
 	private long count(String sql) {
