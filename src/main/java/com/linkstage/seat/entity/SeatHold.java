@@ -64,4 +64,8 @@ public class SeatHold {
 		status = SeatHoldStatus.RELEASED;
 	}
 
+	void expire() {
+		status = SeatHoldStatus.EXPIRED;
+	}
+
 }

@@ -28,4 +28,9 @@ class HoldRecorder {
 		holdGroupRepository.findById(holdGroupId).ifPresent(HoldGroup::release);
 	}
 
+	@Transactional
+	public void markExpired(Long holdGroupId) {
+		holdGroupRepository.findById(holdGroupId).ifPresent(HoldGroup::expire);
+	}
+
 }

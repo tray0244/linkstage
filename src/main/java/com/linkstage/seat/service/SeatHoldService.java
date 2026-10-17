@@ -128,13 +128,20 @@ public class SeatHoldService {
 		HoldGroup group = holdGroupRepository.findWithSeatHolds(requestId)
 			.filter(g -> g.getMemberId().equals(memberId))
 			.orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "선점을 찾을 수 없습니다."));
-		if (group.getStatus() == HoldGroupStatus.RELEASED) {
+		// 이미 풀렸거나 만료로 적힌 선점은 그대로 둔다. EXPIRED를 RELEASED로 덮지 않는다.
+		if (group.getStatus() == HoldGroupStatus.RELEASED || group.getStatus() == HoldGroupStatus.EXPIRED) {
 			return;
 		}
 		if (group.getStatus() == HoldGroupStatus.CONFIRMED) {
 			throw new BusinessException(ErrorCode.INVALID_REQUEST, "결제가 끝난 선점은 풀 수 없습니다.");
 		}
-		seatHoldStore.release(group.getScheduleId(), seatIds(group), requestId);
+		// release.lua가 지운 좌석 수로 판단한다. 0개면 Redis에서 이미 만료된 선점이다.
+		// 확인(MGET)과 해제를 따로 하면 그 사이에 키가 만료될 수 있어서, 해제 결과를 그대로 쓴다.
+		int released = seatHoldStore.release(group.getScheduleId(), seatIds(group), requestId);
+		if (released == 0) {
+			holdRecorder.markExpired(group.getId());
+			return;
+		}
 		holdRecorder.markReleased(group.getId());
 	}
 

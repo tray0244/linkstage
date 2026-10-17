@@ -151,6 +151,48 @@ class SeatHoldApiTest {
 	}
 
 	@Test
+	void Redis에서_만료된_선점을_풀면_204이고_EXPIRED로_적힌다() throws Exception {
+		hold(1, "req-1", "[1, 2]").andExpect(status().isCreated());
+		// 10분이 지나 좌석 키가 만료된 상태를 만든다.
+		redis.delete(redis.keys("schedule_seat:{" + SCHEDULE_ID + "}:*"));
+
+		release(1, "req-1").andExpect(status().isNoContent());
+
+		assertThat(count("SELECT COUNT(*) FROM hold_group WHERE request_id = 'req-1' AND status = 'EXPIRED'"))
+			.isEqualTo(1);
+		assertThat(count("SELECT COUNT(*) FROM seat_hold sh JOIN hold_group g ON g.id = sh.hold_group_id"
+				+ " WHERE g.request_id = 'req-1' AND sh.status = 'EXPIRED'")).isEqualTo(2);
+	}
+
+	@Test
+	void 만료_뒤_다른_회원이_잡은_좌석은_풀지_않고_EXPIRED로_적는다() throws Exception {
+		hold(1, "req-1", "[1]").andExpect(status().isCreated());
+		redis.delete(redis.keys("schedule_seat:{" + SCHEDULE_ID + "}:*"));
+		hold(2, "req-2", "[1]").andExpect(status().isCreated());
+
+		release(1, "req-1").andExpect(status().isNoContent());
+
+		assertThat(redis.opsForValue().get("schedule_seat:{" + SCHEDULE_ID + "}:1")).isEqualTo("HELD:req-2");
+		assertThat(count("SELECT COUNT(*) FROM hold_group WHERE request_id = 'req-1' AND status = 'EXPIRED'"))
+			.isEqualTo(1);
+	}
+
+	@Test
+	void 만료로_적힌_선점을_다시_풀어도_EXPIRED_그대로다() throws Exception {
+		hold(1, "req-1", "[1]").andExpect(status().isCreated());
+		redis.delete(redis.keys("schedule_seat:{" + SCHEDULE_ID + "}:*"));
+		release(1, "req-1").andExpect(status().isNoContent());
+		// 좌석 키를 다시 넣는다. 두 번째 풀기가 Redis까지 가면 이 키를 지우고 RELEASED로 적어서 아래 확인이 실패한다.
+		redis.opsForValue().set("schedule_seat:{" + SCHEDULE_ID + "}:1", "HELD:req-1");
+
+		release(1, "req-1").andExpect(status().isNoContent());
+
+		assertThat(redis.opsForValue().get("schedule_seat:{" + SCHEDULE_ID + "}:1")).isEqualTo("HELD:req-1");
+		assertThat(count("SELECT COUNT(*) FROM hold_group WHERE request_id = 'req-1' AND status = 'EXPIRED'"))
+			.isEqualTo(1);
+	}
+
+	@Test
 	void 남의_선점을_풀면_404이고_좌석과_기록은_그대로다() throws Exception {
 		hold(1, "req-1", "[1]").andExpect(status().isCreated());
 
