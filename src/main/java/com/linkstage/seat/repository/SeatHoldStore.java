@@ -75,6 +75,17 @@ public class SeatHoldStore {
 		return states;
 	}
 
+	// 좌석이 모두 이 requestId의 선점(HELD:requestId)인지 본다 (MGET 1번).
+	// 키가 없거나, 다른 requestId가 잡았거나, 확정(RESERVED)된 좌석이 하나라도 있으면 false다.
+	public boolean isHeldBy(long scheduleId, List<Long> seatIds, String requestId) {
+		if (seatIds.isEmpty()) {
+			return false;
+		}
+		String held = "HELD:" + requestId;
+		List<String> values = redis.opsForValue().multiGet(seatKeys(scheduleId, seatIds));
+		return values != null && values.stream().allMatch(held::equals);
+	}
+
 	private static List<String> seatKeys(long scheduleId, List<Long> seatIds) {
 		List<String> keys = new ArrayList<>(seatIds.size());
 		for (long seatId : seatIds) {
