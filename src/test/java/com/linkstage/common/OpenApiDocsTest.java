@@ -36,7 +36,8 @@ class OpenApiDocsTest {
 		mvc.perform(get("/v3/api-docs"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.paths['/api/shows']").exists())
-			.andExpect(jsonPath("$.paths['/api/schedules/{scheduleId}/seats']").exists());
+			.andExpect(jsonPath("$.paths['/api/schedules/{scheduleId}/seats']").exists())
+			.andExpect(jsonPath("$.paths['/api/payments'].post.summary").value("결제 준비"));
 	}
 
 	@Test
@@ -55,7 +56,7 @@ class OpenApiDocsTest {
 		mvc.perform(get("/v3/api-docs"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.info.title").value("LinkStage 공연 예매 API"))
-			.andExpect(jsonPath("$.tags[*].name").value(hasItems("공연", "회차 좌석", "좌석 선점", "테스트 전용")))
+			.andExpect(jsonPath("$.tags[*].name").value(hasItems("공연", "회차 좌석", "좌석 선점", "결제", "테스트 전용")))
 			.andExpect(jsonPath("$.paths['/api/schedules/{scheduleId}/holds'].post.summary").value("좌석 잡기"));
 	}
 

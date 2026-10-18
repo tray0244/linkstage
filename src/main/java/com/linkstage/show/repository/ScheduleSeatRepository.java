@@ -24,4 +24,8 @@ public interface ScheduleSeatRepository extends JpaRepository<ScheduleSeat, Long
 	@Query("select ss from ScheduleSeat ss join fetch ss.seat where ss.id in :ids")
 	List<ScheduleSeat> findAllWithSeatByIds(@Param("ids") Collection<Long> ids);
 
+	// schedule_seat id로 찾되, 가격을 읽을 수 있게 좌석과 등급을 함께 가져온다.
+	@Query("select ss from ScheduleSeat ss join fetch ss.seat s join fetch s.seatGrade where ss.id in :ids")
+	List<ScheduleSeat> findAllWithGradeByIds(@Param("ids") Collection<Long> ids);
+
 }
