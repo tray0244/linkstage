@@ -124,10 +124,7 @@ public class SeatHoldService {
 	}
 
 	public void release(Long memberId, String requestId) {
-		// 남의 선점이면 없는 것과 같게 404를 준다. 있는지 없는지도 알려 주지 않는다.
-		HoldGroup group = holdGroupRepository.findWithSeatHolds(requestId)
-			.filter(g -> g.getMemberId().equals(memberId))
-			.orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "선점을 찾을 수 없습니다."));
+		HoldGroup group = findMine(memberId, requestId);
 		// 이미 풀렸거나 만료로 적힌 선점은 그대로 둔다. EXPIRED를 RELEASED로 덮지 않는다.
 		if (group.getStatus() == HoldGroupStatus.RELEASED || group.getStatus() == HoldGroupStatus.EXPIRED) {
 			return;
@@ -143,6 +140,32 @@ public class SeatHoldService {
 			return;
 		}
 		holdRecorder.markReleased(group.getId());
+	}
+
+	// 결제할 수 있는 내 선점을 돌려준다. 결제 준비가 부른다.
+	// 선점이 살아 있는지는 Redis로 판단한다. 좌석 키가 모두 "HELD:이 requestId"여야 한다.
+	// Redis에서 이미 만료됐거나 다른 요청이 잡았으면 EXPIRED로 적고 409를 준다.
+	public HoldGroup getLiveHold(Long memberId, String requestId) {
+		HoldGroup group = findMine(memberId, requestId);
+		switch (group.getStatus()) {
+			case CONFIRMED -> throw new BusinessException(ErrorCode.ALREADY_PAID);
+			case RELEASED -> throw new BusinessException(ErrorCode.HOLD_EXPIRED, "좌석이 풀렸습니다.");
+			case EXPIRED -> throw new BusinessException(ErrorCode.HOLD_EXPIRED);
+			case HOLDING -> {
+			}
+		}
+		if (!seatHoldStore.isHeldBy(group.getScheduleId(), seatIds(group), requestId)) {
+			holdRecorder.markExpired(group.getId());
+			throw new BusinessException(ErrorCode.HOLD_EXPIRED);
+		}
+		return group;
+	}
+
+	// 남의 선점이면 없는 것과 같게 404를 준다. 있는지 없는지도 알려 주지 않는다.
+	private HoldGroup findMine(Long memberId, String requestId) {
+		return holdGroupRepository.findWithSeatHolds(requestId)
+			.filter(g -> g.getMemberId().equals(memberId))
+			.orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "선점을 찾을 수 없습니다."));
 	}
 
 	// DB 저장에 실패했을 때 Redis 선점을 되돌린다.
