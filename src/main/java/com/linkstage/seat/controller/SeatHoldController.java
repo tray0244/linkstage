@@ -34,7 +34,7 @@ public class SeatHoldController {
 		return seatHoldService.hold(memberId, scheduleId, request);
 	}
 
-	@Operation(summary = "잡은 좌석 풀기", description = "내가 잡은 좌석을 바로 푼다. 성공하면 204이고, 이미 풀었어도 204. 남의 선점이거나 없으면 404 NOT_FOUND.")
+	@Operation(summary = "잡은 좌석 풀기", description = "내가 잡은 좌석을 바로 푼다. 성공하면 204이고, 이미 풀었거나 만료됐어도 204. 결제가 끝난 좌석은 400 INVALID_REQUEST, 남의 선점이거나 없으면 404 NOT_FOUND.")
 	@DeleteMapping("/api/holds/{requestId}")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	public void release(@PathVariable String requestId, @LoginMember Long memberId) {

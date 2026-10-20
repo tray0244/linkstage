@@ -4,6 +4,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.linkstage.seat.entity.HoldGroup;
+import com.linkstage.seat.entity.HoldGroupStatus;
+import com.linkstage.seat.entity.SeatHoldStatus;
 import com.linkstage.seat.repository.HoldGroupRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -23,14 +25,24 @@ class HoldRecorder {
 		return holdGroupRepository.saveAndFlush(group);
 	}
 
+	// 아래 두 메서드는 HOLDING일 때만 바꾸고, 바꿨으면 true를 준다.
+	// false면 그 사이에 다른 요청이 상태를 먼저 바꾼 것이다. 부른 쪽이 다시 읽어서 답한다.
 	@Transactional
-	public void markReleased(Long holdGroupId) {
-		holdGroupRepository.findById(holdGroupId).ifPresent(HoldGroup::release);
+	public boolean markReleased(Long holdGroupId) {
+		return mark(holdGroupId, HoldGroupStatus.RELEASED, SeatHoldStatus.RELEASED);
 	}
 
 	@Transactional
-	public void markExpired(Long holdGroupId) {
-		holdGroupRepository.findById(holdGroupId).ifPresent(HoldGroup::expire);
+	public boolean markExpired(Long holdGroupId) {
+		return mark(holdGroupId, HoldGroupStatus.EXPIRED, SeatHoldStatus.EXPIRED);
+	}
+
+	private boolean mark(Long holdGroupId, HoldGroupStatus groupStatus, SeatHoldStatus seatStatus) {
+		if (holdGroupRepository.updateStatusIfHolding(holdGroupId, groupStatus) == 0) {
+			return false;
+		}
+		holdGroupRepository.updateSeatStatusIfHeld(holdGroupId, seatStatus);
+		return true;
 	}
 
 }

@@ -193,6 +193,21 @@ class SeatHoldApiTest {
 	}
 
 	@Test
+	void 결제가_끝난_선점을_풀면_400이고_좌석은_그대로다() throws Exception {
+		hold(1, "req-1", "[1]").andExpect(status().isCreated());
+		jdbc.update("UPDATE hold_group SET status = 'CONFIRMED' WHERE request_id = 'req-1'");
+		assertThat(count("SELECT COUNT(*) FROM hold_group WHERE request_id = 'req-1' AND status = 'CONFIRMED'"))
+			.isEqualTo(1);
+
+		release(1, "req-1").andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
+			.andExpect(jsonPath("$.message").value("결제가 끝난 좌석은 풀 수 없습니다."));
+		assertThat(redis.opsForValue().get("schedule_seat:{" + SCHEDULE_ID + "}:1")).isEqualTo("HELD:req-1");
+		assertThat(count("SELECT COUNT(*) FROM hold_group WHERE request_id = 'req-1' AND status = 'CONFIRMED'"))
+			.isEqualTo(1);
+	}
+
+	@Test
 	void 남의_선점을_풀면_404이고_좌석과_기록은_그대로다() throws Exception {
 		hold(1, "req-1", "[1]").andExpect(status().isCreated());
 

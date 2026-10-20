@@ -126,20 +126,26 @@ public class SeatHoldService {
 	public void release(Long memberId, String requestId) {
 		HoldGroup group = findMine(memberId, requestId);
 		// 이미 풀렸거나 만료로 적힌 선점은 그대로 둔다. EXPIRED를 RELEASED로 덮지 않는다.
-		if (group.getStatus() == HoldGroupStatus.RELEASED || group.getStatus() == HoldGroupStatus.EXPIRED) {
+		if (group.getStatus() != HoldGroupStatus.HOLDING) {
+			checkReleasable(group.getStatus());
 			return;
-		}
-		if (group.getStatus() == HoldGroupStatus.CONFIRMED) {
-			throw new BusinessException(ErrorCode.INVALID_REQUEST, "결제가 끝난 선점은 풀 수 없습니다.");
 		}
 		// release.lua가 지운 좌석 수로 판단한다. 0개면 Redis에서 이미 만료된 선점이다.
 		// 확인(MGET)과 해제를 따로 하면 그 사이에 키가 만료될 수 있어서, 해제 결과를 그대로 쓴다.
 		int released = seatHoldStore.release(group.getScheduleId(), seatIds(group), requestId);
-		if (released == 0) {
-			holdRecorder.markExpired(group.getId());
-			return;
+		boolean marked = released == 0 ? holdRecorder.markExpired(group.getId())
+				: holdRecorder.markReleased(group.getId());
+		if (!marked) {
+			// 그 사이에 다른 요청이 상태를 먼저 바꿨다. 다시 읽어서 실제 상태로 답한다.
+			checkReleasable(currentStatus(group));
 		}
-		holdRecorder.markReleased(group.getId());
+	}
+
+	// 결제가 끝난 선점만 막는다. RELEASED·EXPIRED는 204로 끝낸다.
+	private void checkReleasable(HoldGroupStatus status) {
+		if (status == HoldGroupStatus.CONFIRMED) {
+			throw new BusinessException(ErrorCode.INVALID_REQUEST, "결제가 끝난 좌석은 풀 수 없습니다.");
+		}
 	}
 
 	// 결제할 수 있는 내 선점을 돌려준다. 결제 준비가 부른다.
@@ -147,18 +153,32 @@ public class SeatHoldService {
 	// Redis에서 이미 만료됐거나 다른 요청이 잡았으면 EXPIRED로 적고 409를 준다.
 	public HoldGroup getLiveHold(Long memberId, String requestId) {
 		HoldGroup group = findMine(memberId, requestId);
-		switch (group.getStatus()) {
+		throwIfNotHolding(group.getStatus());
+		if (!seatHoldStore.isHeldBy(group.getScheduleId(), seatIds(group), requestId)) {
+			if (!holdRecorder.markExpired(group.getId())) {
+				// 그 사이에 좌석 풀기나 결제 승인이 상태를 먼저 바꿨다. 그 상태로 답한다.
+				throwIfNotHolding(currentStatus(group));
+			}
+			throw new BusinessException(ErrorCode.HOLD_EXPIRED);
+		}
+		return group;
+	}
+
+	private void throwIfNotHolding(HoldGroupStatus status) {
+		switch (status) {
 			case CONFIRMED -> throw new BusinessException(ErrorCode.ALREADY_PAID);
 			case RELEASED -> throw new BusinessException(ErrorCode.HOLD_EXPIRED, "좌석이 풀렸습니다.");
 			case EXPIRED -> throw new BusinessException(ErrorCode.HOLD_EXPIRED);
 			case HOLDING -> {
 			}
 		}
-		if (!seatHoldStore.isHeldBy(group.getScheduleId(), seatIds(group), requestId)) {
-			holdRecorder.markExpired(group.getId());
-			throw new BusinessException(ErrorCode.HOLD_EXPIRED);
-		}
-		return group;
+	}
+
+	// 이 클래스에는 트랜잭션이 없으므로 커밋된 최신 상태를 읽는다.
+	private HoldGroupStatus currentStatus(HoldGroup group) {
+		return holdGroupRepository.findById(group.getId())
+			.map(HoldGroup::getStatus)
+			.orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "선점을 찾을 수 없습니다."));
 	}
 
 	// 남의 선점이면 없는 것과 같게 404를 준다. 있는지 없는지도 알려 주지 않는다.

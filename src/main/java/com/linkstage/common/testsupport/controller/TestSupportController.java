@@ -22,7 +22,7 @@ public class TestSupportController {
 
 	private final TestSupportService testSupportService;
 
-	@Operation(summary = "회차 좌석 초기화", description = "k6를 다시 돌리기 전에 회차의 선점 기록과 Redis 좌석 키를 지우고 좌석을 AVAILABLE로 되돌린다. 성공하면 204, 없는 회차는 404 NOT_FOUND.")
+	@Operation(summary = "회차 좌석 초기화", description = "k6를 다시 돌리기 전에 회차의 선점·결제 기록과 Redis 좌석·대기열 키를 지우고 좌석을 AVAILABLE로 되돌린다. 성공하면 204, 없는 회차는 404 NOT_FOUND.")
 	@PostMapping("/api/test/schedules/{scheduleId}/reset")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	public void resetSchedule(@PathVariable Long scheduleId) {

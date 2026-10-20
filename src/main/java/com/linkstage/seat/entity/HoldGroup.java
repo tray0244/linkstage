@@ -82,16 +82,6 @@ public class HoldGroup {
 		return group;
 	}
 
-	public void release() {
-		status = HoldGroupStatus.RELEASED;
-		seatHolds.forEach(SeatHold::release);
-	}
-
-	public void expire() {
-		status = HoldGroupStatus.EXPIRED;
-		seatHolds.forEach(SeatHold::expire);
-	}
-
 	public List<Long> scheduleSeatIds() {
 		return seatHolds.stream().map(SeatHold::getScheduleSeatId).toList();
 	}
